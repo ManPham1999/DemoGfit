@@ -6,7 +6,7 @@
  * @flow strict-local
  */
 
-import React, {useEffect} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   SafeAreaView,
   StyleSheet,
@@ -14,6 +14,7 @@ import {
   View,
   Text,
   StatusBar,
+  Button,
 } from 'react-native';
 
 import {
@@ -25,21 +26,41 @@ import {
 } from 'react-native/Libraries/NewAppScreen';
 import GoogleFit, {Scopes} from 'react-native-google-fit';
 const App: () => React$Node = () => {
+  const [data, setData] = useState([]);
   useEffect(() => {
+    onRequestToGetSteps();
+  }, []);
+
+  const onFetchSteps = async () => {
+    await onRequestToGetSteps();
+    await onGetSteps();
+  };
+  const onRequestToGetSteps = async () => {
     const options = {
       scopes: [
         Scopes.FITNESS_ACTIVITY_READ_WRITE,
-        Scopes.FITNESS_BODY_READ_WRITE,
+        Scopes.FITNESS_ACTIVITY_READ,
       ],
     };
-    GoogleFit.authorize(options)
+    await GoogleFit.authorize(options)
       .then((res) => {
         console.log('authorized >>>', res);
       })
       .catch((err) => {
         console.log('err >>> ', err);
       });
-  }, []);
+  };
+  const onGetSteps = async () => {
+    await GoogleFit.startRecording((STEP_RECORDING) => {
+      console.log('Recording...');
+    });
+    await GoogleFit.getDailySteps(new Date())
+      .then(async (res) => {
+        await setData(res);
+      })
+      .catch();
+  };
+  console.log('app rendered!');
   return (
     <>
       <StatusBar barStyle="dark-content" />
@@ -55,32 +76,13 @@ const App: () => React$Node = () => {
           )}
           <View style={styles.body}>
             <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>Step One</Text>
+              <Text style={styles.sectionTitle}>Số bước chân trong ngày:</Text>
               <Text style={styles.sectionDescription}>
-                Edit <Text style={styles.highlight}>App.js</Text> to change this
-                screen and then come back to see your edits.
+                {data[2]?.steps[0] ? data[2]?.steps[0]?.value : '...loading'}
               </Text>
             </View>
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>See Your Changes</Text>
-              <Text style={styles.sectionDescription}>
-                <ReloadInstructions />
-              </Text>
-            </View>
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>Debug</Text>
-              <Text style={styles.sectionDescription}>
-                <DebugInstructions />
-              </Text>
-            </View>
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>Learn More</Text>
-              <Text style={styles.sectionDescription}>
-                Read the docs to discover what to do next:
-              </Text>
-            </View>
-            <LearnMoreLinks />
           </View>
+          <Button onPress={onFetchSteps} title={'Fetch Step'}></Button>
         </ScrollView>
       </SafeAreaView>
     </>
